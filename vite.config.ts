@@ -38,6 +38,7 @@ function scopeRemoteCss(): PostcssPlugin {
 }
 
 export default defineConfig({
+    base: './',
     plugins: [react(), tailwindcss()],
     css: {
         postcss: {
@@ -46,5 +47,27 @@ export default defineConfig({
     },
     resolve: {
         tsconfigPaths: true
+    },
+    build: {
+        target: 'es2022',
+        chunkSizeWarningLimit: 800,
+        rolldownOptions: {
+            input: {
+                main: 'index.html',
+                'remote-entry': 'src/remote-entry.tsx'
+            },
+            preserveEntrySignatures: 'exports-only',
+            output: {
+                entryFileNames: chunk => chunk.name === 'remote-entry' ? 'remote-entry.js' : 'assets/[name]-[hash].js'
+            }
+        }
+    },
+    server: {
+        port: 5173,
+        cors: true
+    },
+    preview: {
+        port: 4173,
+        cors: true
     }
 })

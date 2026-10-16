@@ -15,5 +15,6 @@ html:has(.mfe-root.dark) {
 
 #root > .mfe-root {
     min-height: 100svh;
+    padding: 1.5rem;
     background-color: var(--background);
 }
