@@ -1,13 +1,11 @@
 import clsx from 'clsx'
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 import PageHeader from '@/components/page/PageHeader'
 import HostInfo from '@/modules/host/components/HostInfo'
-import { useProductsQuery } from '../../queries/productsQueries'
+import ProductsSummary from './components/Summary'
+import ProductsSearchbar from './components/Searchbar'
+import ProductsList from './components/List'
 
 export default function Products() {
-
-    const { data: products, isPending, isError, error } = useProductsQuery()
 
     return (
 
@@ -15,26 +13,16 @@ export default function Products() {
             <div className={clsx('flex flex-col gap-6')}>
                 <PageHeader
                     title='Produtos'
-                    description='Microfrontend React + Vite carregado em runtime.'
-                />
+                    description='Catálogo servido pelo microfrontend React + Vite.'
+                >
+                    <HostInfo />
+                </PageHeader>
 
-                <HostInfo />
+                <ProductsSummary />
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>API mock</CardTitle>
+                <ProductsSearchbar />
 
-                        {isPending && <Skeleton className={clsx('h-5 w-48')} />}
-
-                        {isError && <CardDescription>{error.message}</CardDescription>}
-
-                        {!!products && (
-                            <CardDescription>
-                                {products.length} produtos carregados via React Query.
-                            </CardDescription>
-                        )}
-                    </CardHeader>
-                </Card>
+                <ProductsList />
             </div>
         </>
 

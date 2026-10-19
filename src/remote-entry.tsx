@@ -15,14 +15,16 @@ export function mount(element: HTMLElement, props: IRemoteProps = {}): IRemoteIn
 
     const removeStyles = HostController.injectStyles(styles)
     const container = HostController.createScopedElement()
+    const portalContainer = HostController.createScopedElement('mfe-portal')
 
     element.replaceChildren(container)
+    document.body.append(portalContainer)
 
-    connect(props)
-    HostController.applyTheme([container], props.theme)
+    connect(props, portalContainer)
+    HostController.applyTheme([container, portalContainer], props.theme)
 
     const unsubscribeTheme = useHostStore.subscribe((state, prev) => {
-        if (state.theme !== prev.theme) HostController.applyTheme([container], state.theme)
+        if (state.theme !== prev.theme) HostController.applyTheme([container, portalContainer], state.theme)
     })
 
     const root = createRoot(container, { identifierPrefix: 'mfe-products-' })
@@ -41,6 +43,7 @@ export function mount(element: HTMLElement, props: IRemoteProps = {}): IRemoteIn
             root.unmount()
             unsubscribeTheme()
             container.remove()
+            portalContainer.remove()
             removeStyles()
             disconnect()
         }

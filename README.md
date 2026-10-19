@@ -44,12 +44,13 @@ Mudança incompatível = incrementar `CONTRACT_VERSION` ([`modules/host/constant
 O [`remote-entry.tsx`](src/remote-entry.tsx) exporta `contractVersion` e `mount(element, props)`. O `mount`:
 
 1. Injeta o `remote.css` no `<head>` (import `?inline`), uma vez só mesmo com várias instâncias.
-2. Cria um container `.mfe-root` dentro do elemento do host e aplica o tema (`dark` + `color-scheme`).
-3. Guarda as props no [`hostStore`](src/modules/host/store/hostStore.ts) (zustand), de onde qualquer componente lê tema, usuário e `onEvent`.
+2. Cria um container `.mfe-root` dentro do elemento do host e outro `.mfe-root.mfe-portal` no `<body>` (para os portals)
+   e aplica o tema nos dois (`dark` + `color-scheme`).
+3. Guarda as props e o container dos portals no [`hostStore`](src/modules/host/store/hostStore.ts) (zustand), de onde qualquer componente lê tema, usuário e `onEvent`.
 4. Cria a árvore React com `identifierPrefix` próprio, para os `useId` não colidirem com os do host.
 
 `update(props)` só atualiza o `hostStore` (a troca de tema reaplica a classe no container). `unmount()` desmonta o React,
-remove o container e o `<style>` e limpa o store.
+remove os containers e o `<style>` e limpa o store.
 
 O [`main.tsx`](src/main.tsx) (standalone) usa o mesmo `mount`, com `hostName: 'Standalone'` e o tema do sistema.
 
@@ -66,16 +67,18 @@ src/
 │   ├── app/                     # AppProvider (QueryProvider + Toaster)
 │   ├── page/PageHeader
 │   └── ui/                      # componentes do shadcn
+├── hooks/usePortalContainer     # container dos portals (Select, Dialog...)
 ├── modules/
 │   ├── api/                     # ApiError, MockApiService, queryClient e queryMeta
 │   ├── host/                    # contrato, hostStore, HostController, emitHostEvent
 │   └── products/
-│       ├── interfaces/  constants/  mocks/
+│       ├── interfaces/  constants/  mocks/  utils/
 │       ├── services/            # productsService.ts (um método por endpoint)
-│       ├── controllers/         # productsController.ts (orquestração, eventos para o host)
+│       ├── controllers/         # productsController.ts (orquestração e regras puras: filtro, resumo)
 │       ├── queries/             # productsQueries.ts e productsMutations.ts
-│       └── pages/Products/
-└── utils/                       # toast, sleep, storage, info
+│       ├── store/               # productsStore.ts (filtros da listagem)
+│       └── pages/Products/      # Summary, Searchbar, List, Row, ListSkeleton
+└── utils/                       # toast, sleep, storage, info, formatCurrency, filterString
 ```
 
 ## API mock
@@ -95,7 +98,9 @@ Para voltar aos dados iniciais, apague a chave `mfe-remote:db`.
 Fluxo: `Componente → useXQuery / useXMutation → Controller / Service → apiMock`.
 
 - **Service**: um método por endpoint, repassando o `signal`.
-- **Controller**: orquestração fora do React. Ex.: `ProductsController.getProducts` busca a lista e avisa o host (`products:loaded`).
+- **Controller**: orquestração e regras fora do React. Ex.: `ProductsController.getProducts` busca a lista e avisa o host
+  (`products:loaded`); `filterProducts` e `getProductsSummary` são funções puras usadas pela página.
+- **Store (zustand)**: só estado de cliente (filtros da listagem). Os dados da API ficam no cache do React Query.
 - **Queries**: `productsKeys` (factory de keys), `productsQueries` (`queryOptions`) e `useProductsQuery`.
 - **Mutations**: invalidam `productsKeys.all` e enviam o evento ao host (`product:created`, `product:updated`, `product:deleted`).
 
@@ -144,6 +149,18 @@ alterar o outro, o CSS fica dividido em dois arquivos:
 Para conferir o escopo, abra `http://localhost:5173/src/styles/remote.css?inline` com o `yarn dev` rodando:
 nenhum seletor de topo pode começar sem `.mfe-root`.
 
+### Portals
+
+Select, Dialog, Popover e afins renderizam via portal no `document.body`, fora do `.mfe-root`, e perderiam os estilos e
+tokens do remote. Por isso o `mount` cria um container `.mfe-root.mfe-portal` no `<body>` (com o mesmo tema) e os
+componentes com portal usam [`usePortalContainer()`](src/hooks/usePortalContainer/index.ts):
+
+```tsx
+<SelectPrimitive.Portal container={usePortalContainer()}>
+```
+
+Não foi usado Shadow DOM: o focus trap dos dialogs escuta `focusin` no `document`, e dentro de Shadow DOM o foco fica preso.
+
 ## Adicionando componentes do shadcn
 
 ```bash
@@ -153,8 +170,12 @@ npx shadcn@latest add <componente>
 Os arquivos são criados em `src/components/ui` (configuração em [`components.json`](components.json), apontando para o `remote.css`).
 Tokens novos vão em `.mfe-root` / `.mfe-root.dark`, nunca em `:root`.
 
-> **Atenção:** o [`sonner.tsx`](src/components/ui/sonner.tsx) lê o tema do `hostStore` (a CLI gera `useTheme` do `next-themes`).
-> Se rodar `add sonner --overwrite`, refaça o ajuste e não instale o `next-themes`.
+> **Atenção:** alguns componentes gerados foram ajustados. Se rodar `add <componente> --overwrite`, refaça o ajuste:
+>
+> - [`sonner.tsx`](src/components/ui/sonner.tsx): lê o tema do `hostStore` (a CLI gera `useTheme` do `next-themes`, que não deve ser instalado).
+> - [`select.tsx`](src/components/ui/select.tsx): `SelectPrimitive.Portal` recebe `container={usePortalContainer()}`.
+>
+> Ao adicionar um componente com portal (Dialog, AlertDialog, Popover, DropdownMenu, Tooltip...), faça o mesmo no `*.Portal` dele.
 
 ## Deploy na Vercel
 

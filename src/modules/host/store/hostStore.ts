@@ -2,22 +2,25 @@ import { create } from 'zustand'
 import type { IRemoteProps } from '../interfaces/IRemoteContract'
 
 interface IHostState extends IRemoteProps {
-    connect: (props: IRemoteProps) => void
+    portalContainer: HTMLElement | null
+
+    connect: (props: IRemoteProps, portalContainer: HTMLElement) => void
     update: (props: Partial<IRemoteProps>) => void
     disconnect: () => void
 }
 
-const initialState: IRemoteProps = {
+const initialState: Omit<IHostState, 'connect' | 'update' | 'disconnect'> = {
     hostName: undefined,
     theme: 'light',
     user: null,
-    onEvent: undefined
+    onEvent: undefined,
+    portalContainer: null
 }
 
 const useHostStore = create<IHostState>()((set) => ({
     ...initialState,
 
-    connect: (props) => set({ ...initialState, ...props }),
+    connect: (props, portalContainer) => set({ ...initialState, ...props, portalContainer }),
     update: (props) => set(props),
     disconnect: () => set(initialState)
 }))
