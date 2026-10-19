@@ -2,9 +2,9 @@ import clsx from 'clsx'
 import { CloudAlert, PackageSearch, RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
-import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import useProductsStore from '@/modules/products/store/productsStore'
 import ProductsController from '@/modules/products/controllers/productsController'
 import { useProductsQuery } from '@/modules/products/queries/productsQueries'
@@ -13,7 +13,7 @@ import ProductRow from '../Row'
 
 export default function ProductsList() {
 
-    const { filters, clearFilters } = useProductsStore()
+    const { filters, clearFilters, setOpenModalCreateProduct } = useProductsStore()
 
     const { data: products, isPending, isError, isFetching, refetch } = useProductsQuery()
 
@@ -70,20 +70,24 @@ export default function ProductsList() {
                                 <EmptyDescription>
                                     {HAS_FILTERS
                                         ? 'Ajuste a busca ou os filtros para ver outros resultados.'
-                                        : 'Os produtos cadastrados aparecem aqui.'}
+                                        : 'Cadastre o primeiro produto para começar.'}
                                 </EmptyDescription>
                             </EmptyHeader>
 
-                            {HAS_FILTERS && (
-                                <EmptyContent>
+                            <EmptyContent>
+                                {HAS_FILTERS ? (
                                     <Button
                                         variant='outline'
                                         onClick={clearFilters}
                                     >
                                         Limpar filtros
                                     </Button>
-                                </EmptyContent>
-                            )}
+                                ) : (
+                                    <Button onClick={() => setOpenModalCreateProduct(true)}>
+                                        Novo produto
+                                    </Button>
+                                )}
+                            </EmptyContent>
                         </Empty>
                     ) : (
                         <Table>
@@ -94,6 +98,7 @@ export default function ProductsList() {
                                     <TableHead className={clsx('text-right')}>Preço</TableHead>
                                     <TableHead className={clsx('text-right')}>Estoque</TableHead>
                                     <TableHead>Status</TableHead>
+                                    <TableHead className={clsx('text-right')}>Ações</TableHead>
                                 </TableRow>
                             </TableHeader>
 

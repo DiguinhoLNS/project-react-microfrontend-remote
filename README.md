@@ -8,7 +8,7 @@ Microfrontend React carregado em runtime pelo
 - React 19 + Vite 8 (Rolldown) + TypeScript
 - Tailwind CSS v4 + [shadcn/ui](https://ui.shadcn.com) (preset `radix-nova`, ícones Lucide)
 - React Query (dados de servidor) + Zustand (props recebidas do host)
-- Sonner (toasts), API mock com latência e `localStorage`
+- Formik + yup (formulários), Sonner (toasts), API mock com latência e `localStorage`
 - Yarn 4 (versionado em `.yarn/releases`), Oxlint, Husky + Commitlint
 
 ## Rodando local
@@ -73,6 +73,9 @@ src/
 │   ├── host/                    # contrato, hostStore, HostController, emitHostEvent
 │   └── products/
 │       ├── interfaces/  constants/  mocks/  utils/
+│       ├── components/
+│       │   ├── base/            # Form (schema yup + campos) e Modal (Dialog + Formik)
+│       │   └── common/          # CreateModal, UpdateModal, DeleteDialog
 │       ├── services/            # productsService.ts (um método por endpoint)
 │       ├── controllers/         # productsController.ts (orquestração e regras puras: filtro, resumo)
 │       ├── queries/             # productsQueries.ts e productsMutations.ts
@@ -100,7 +103,11 @@ Fluxo: `Componente → useXQuery / useXMutation → Controller / Service → api
 - **Service**: um método por endpoint, repassando o `signal`.
 - **Controller**: orquestração e regras fora do React. Ex.: `ProductsController.getProducts` busca a lista e avisa o host
   (`products:loaded`); `filterProducts` e `getProductsSummary` são funções puras usadas pela página.
-- **Store (zustand)**: só estado de cliente (filtros da listagem). Os dados da API ficam no cache do React Query.
+- **Store (zustand)**: só estado de cliente (filtros, produto selecionado e modais abertos). Os dados da API ficam no cache do React Query.
+
+O CRUD usa um `BaseProductModal` (Dialog + Formik, schema em `components/base/Form/form.ts`) para criar e editar,
+e um `AlertDialog` para excluir. Cada modal chama a mutation e fecha no `onSuccess`; o toast de sucesso vem do
+`meta.successMessage` e o evento para o host (`product:created`, `product:updated`, `product:deleted`) sai da própria mutation.
 - **Queries**: `productsKeys` (factory de keys), `productsQueries` (`queryOptions`) e `useProductsQuery`.
 - **Mutations**: invalidam `productsKeys.all` e enviam o evento ao host (`product:created`, `product:updated`, `product:deleted`).
 
@@ -174,8 +181,10 @@ Tokens novos vão em `.mfe-root` / `.mfe-root.dark`, nunca em `:root`.
 >
 > - [`sonner.tsx`](src/components/ui/sonner.tsx): lê o tema do `hostStore` (a CLI gera `useTheme` do `next-themes`, que não deve ser instalado).
 > - [`select.tsx`](src/components/ui/select.tsx): `SelectPrimitive.Portal` recebe `container={usePortalContainer()}`.
+> - [`dialog.tsx`](src/components/ui/dialog.tsx) e [`alert-dialog.tsx`](src/components/ui/alert-dialog.tsx): o `DialogPortal` /
+>   `AlertDialogPortal` recebe `container={usePortalContainer()}`.
 >
-> Ao adicionar um componente com portal (Dialog, AlertDialog, Popover, DropdownMenu, Tooltip...), faça o mesmo no `*.Portal` dele.
+> Ao adicionar um componente com portal (Popover, DropdownMenu, Tooltip, Sheet...), faça o mesmo no `*.Portal` dele.
 
 ## Deploy na Vercel
 

@@ -1,6 +1,9 @@
 import clsx from 'clsx'
+import { Pencil, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { TableCell, TableRow } from '@/components/ui/table'
+import useProductsStore from '@/modules/products/store/productsStore'
 import type { IProduct } from '@/modules/products/interfaces/IProduct'
 import formatProductCategory from '@/modules/products/utils/formatProductCategory'
 import formatCurrency from '@/utils/formatCurrency'
@@ -10,6 +13,8 @@ interface ProductRowProps {
 }
 
 export default function ProductRow({ data }: ProductRowProps) {
+
+    const { setSelectedProductId, setOpenModalUpdateProduct, setOpenModalDeleteProduct } = useProductsStore()
 
     return (
 
@@ -50,6 +55,35 @@ export default function ProductRow({ data }: ProductRowProps) {
                     <Badge variant={data.active ? 'secondary' : 'outline'}>
                         {data.active ? 'Ativo' : 'Inativo'}
                     </Badge>
+                </TableCell>
+
+                <TableCell>
+                    <div className={clsx('flex justify-end gap-1')}>
+                        <Button
+                            variant='ghost'
+                            size='icon-sm'
+                            aria-label={`Editar ${data.name}`}
+                            onClick={() => {
+                                setSelectedProductId(data.id)
+                                setOpenModalUpdateProduct(true)
+                            }}
+                        >
+                            <Pencil />
+                        </Button>
+
+                        <Button
+                            variant='ghost'
+                            size='icon-sm'
+                            className={clsx('text-muted-foreground hover:text-destructive')}
+                            aria-label={`Excluir ${data.name}`}
+                            onClick={() => {
+                                setSelectedProductId(data.id)
+                                setOpenModalDeleteProduct(true)
+                            }}
+                        >
+                            <Trash2 />
+                        </Button>
+                    </div>
                 </TableCell>
             </TableRow>
         </>

@@ -33,6 +33,10 @@ export default function ProductsListSkeleton({ rows = 5 }: ProductsListSkeletonP
                     <TableCell>
                         <Skeleton className={clsx('h-5 w-14 rounded-full')} />
                     </TableCell>
+
+                    <TableCell>
+                        <Skeleton className={clsx('ml-auto h-7 w-16')} />
+                    </TableCell>
                 </TableRow>
             ))}
         </>

@@ -1,8 +1,8 @@
 import emitHostEvent from '@/modules/host/utils/emitHostEvent'
-import filterString from '@/utils/filterString'
-import ProductsService from '../services/productsService'
-import { ALL_FILTER } from '../constants/filters'
 import type { IRequestOptions } from '@/modules/api/interfaces/IRequestOptions'
+import filterString from '@/utils/filterString'
+import { ALL_FILTER } from '../constants/filters'
+import ProductsService from '../services/productsService'
 import type { IProduct } from '../interfaces/IProduct'
 import type { IProductsFilters } from '../interfaces/IProductsFilters'
 import type { IProductsSummary } from '../interfaces/IProductsSummary'
@@ -31,6 +31,12 @@ export default class ProductsController {
 
             return true
         })
+    }
+
+    public static findProduct(products: IProduct[] = [], id: string | null) {
+        if (!id) return null
+
+        return products.find(product => product.id === id) ?? null
     }
 
     public static hasFilters(filters: IProductsFilters) {

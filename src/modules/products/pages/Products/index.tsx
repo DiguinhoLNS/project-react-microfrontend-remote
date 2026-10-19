@@ -1,11 +1,19 @@
 import clsx from 'clsx'
+import { Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import PageHeader from '@/components/page/PageHeader'
 import HostInfo from '@/modules/host/components/HostInfo'
+import useProductsStore from '@/modules/products/store/productsStore'
+import ProductCreateModal from '@/modules/products/components/common/CreateModal'
+import ProductUpdateModal from '@/modules/products/components/common/UpdateModal'
+import ProductDeleteDialog from '@/modules/products/components/common/DeleteDialog'
+import ProductsList from './components/List'
 import ProductsSummary from './components/Summary'
 import ProductsSearchbar from './components/Searchbar'
-import ProductsList from './components/List'
 
 export default function Products() {
+
+    const { setOpenModalCreateProduct } = useProductsStore()
 
     return (
 
@@ -16,6 +24,11 @@ export default function Products() {
                     description='Catálogo servido pelo microfrontend React + Vite.'
                 >
                     <HostInfo />
+
+                    <Button onClick={() => setOpenModalCreateProduct(true)}>
+                        <Plus />
+                        Novo produto
+                    </Button>
                 </PageHeader>
 
                 <ProductsSummary />
@@ -24,6 +37,10 @@ export default function Products() {
 
                 <ProductsList />
             </div>
+
+            <ProductCreateModal />
+            <ProductUpdateModal />
+            <ProductDeleteDialog />
         </>
 
     )
