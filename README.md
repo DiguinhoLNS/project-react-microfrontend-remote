@@ -20,7 +20,14 @@ yarn dev
 
 Abra http://localhost:5173 para o standalone com HMR.
 
-Para testar dentro do host, rode `yarn serve` aqui e `yarn dev` no host, e abra http://localhost:3000/produtos.
+Para testar dentro do host, rode o build com preview aqui (porta 4173, com CORS):
+
+```bash
+yarn serve
+```
+
+E `yarn dev` no repo do host. Abra http://localhost:3000/produtos: o host busca `http://localhost:4173/remote-entry.js` por padrão.
+A cada mudança no remote, rode `yarn serve` de novo e recarregue a página do host.
 
 ## Scripts
 
@@ -39,7 +46,8 @@ Para testar dentro do host, rode `yarn serve` aqui e `yarn dev` no host, e abra 
 
 O host só conhece o módulo ESM `remote-entry.js`. O contrato fica em
 [`modules/host/interfaces/IRemoteContract.d.ts`](src/modules/host/interfaces/IRemoteContract.d.ts), espelhado do host.
-Mudança incompatível = incrementar `CONTRACT_VERSION` ([`modules/host/constants/contract.ts`](src/modules/host/constants/contract.ts)) nos dois repos.
+Mudança incompatível = incrementar `CONTRACT_VERSION` ([`modules/host/constants/contract.ts`](src/modules/host/constants/contract.ts)) nos dois repos
+(ver "Versionando o contrato" no README do host). O host recusa montar um remote com versão diferente da dele.
 
 O [`remote-entry.tsx`](src/remote-entry.tsx) exporta `contractVersion` e `mount(element, props)`. O `mount`:
 
@@ -79,7 +87,7 @@ src/
 │       ├── services/            # productsService.ts (um método por endpoint)
 │       ├── controllers/         # productsController.ts (orquestração e regras puras: filtro, resumo)
 │       ├── queries/             # productsQueries.ts e productsMutations.ts
-│       ├── store/               # productsStore.ts (filtros da listagem)
+│       ├── store/               # productsStore.ts (filtros, produto selecionado e modais)
 │       └── pages/Products/      # Summary, Searchbar, List, Row, ListSkeleton
 └── utils/                       # toast, sleep, storage, info, formatCurrency, filterString
 ```
@@ -103,13 +111,13 @@ Fluxo: `Componente → useXQuery / useXMutation → Controller / Service → api
 - **Service**: um método por endpoint, repassando o `signal`.
 - **Controller**: orquestração e regras fora do React. Ex.: `ProductsController.getProducts` busca a lista e avisa o host
   (`products:loaded`); `filterProducts` e `getProductsSummary` são funções puras usadas pela página.
+- **Queries**: `productsKeys` (factory de keys), `productsQueries` (`queryOptions`) e `useProductsQuery`.
+- **Mutations**: invalidam `productsKeys.all` e enviam o evento ao host (`product:created`, `product:updated`, `product:deleted`).
 - **Store (zustand)**: só estado de cliente (filtros, produto selecionado e modais abertos). Os dados da API ficam no cache do React Query.
 
 O CRUD usa um `BaseProductModal` (Dialog + Formik, schema em `components/base/Form/form.ts`) para criar e editar,
 e um `AlertDialog` para excluir. Cada modal chama a mutation e fecha no `onSuccess`; o toast de sucesso vem do
-`meta.successMessage` e o evento para o host (`product:created`, `product:updated`, `product:deleted`) sai da própria mutation.
-- **Queries**: `productsKeys` (factory de keys), `productsQueries` (`queryOptions`) e `useProductsQuery`.
-- **Mutations**: invalidam `productsKeys.all` e enviam o evento ao host (`product:created`, `product:updated`, `product:deleted`).
+`meta.successMessage` e o evento para o host sai da própria mutation.
 
 O [`queryClient`](src/modules/api/query/queryClient.ts) é um singleton (o cache sobrevive entre `unmount` e um novo `mount`):
 
@@ -194,7 +202,13 @@ Importe o repo na Vercel (o preset Vite é detectado e a saída é `dist/`). O [
 - `remote-entry.js` sempre revalidado, para o host pegar a versão nova a cada deploy
 - `assets/*` com cache imutável (nomes com hash)
 
-Depois, configure no host `NEXT_PUBLIC_REMOTE_PRODUCTS_URL=https://<dominio-de-producao>/remote-entry.js`.
+Depois, configure no host `NEXT_PUBLIC_REMOTE_PRODUCTS_URL=https://<dominio-de-producao>/remote-entry.js` e faça o deploy dele.
+Novos deploys do remote não exigem deploy do host: a próxima visita já carrega o `remote-entry.js` novo.
+
+> Use o **domínio de produção** do remote. As URLs de preview da Vercel ficam atrás do Deployment Protection
+> por padrão e respondem 401 para o `import()` cross-origin.
+
+O Yarn 4 está versionado em `.yarn/releases` (`yarnPath`), então a Vercel usa a versão certa sem configurar Corepack.
 
 ## Commits
 
