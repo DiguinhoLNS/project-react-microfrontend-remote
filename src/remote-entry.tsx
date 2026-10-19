@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import AppProvider from '@/components/app/AppProvider'
 import Products from '@/modules/products/pages/Products'
 import useHostStore from '@/modules/host/store/hostStore'
 import HostController from '@/modules/host/controllers/hostController'
@@ -28,7 +29,9 @@ export function mount(element: HTMLElement, props: IRemoteProps = {}): IRemoteIn
 
     root.render(
         <StrictMode>
-            <Products />
+            <AppProvider>
+                <Products />
+            </AppProvider>
         </StrictMode>
     )
 

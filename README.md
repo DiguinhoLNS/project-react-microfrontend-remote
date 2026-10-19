@@ -7,7 +7,8 @@ Microfrontend React carregado em runtime pelo
 
 - React 19 + Vite 8 (Rolldown) + TypeScript
 - Tailwind CSS v4 + [shadcn/ui](https://ui.shadcn.com) (preset `radix-nova`, ícones Lucide)
-- Zustand (props recebidas do host)
+- React Query (dados de servidor) + Zustand (props recebidas do host)
+- Sonner (toasts), API mock com latência e `localStorage`
 - Yarn 4 (versionado em `.yarn/releases`), Oxlint, Husky + Commitlint
 
 ## Rodando local
@@ -52,6 +53,64 @@ remove o container e o `<style>` e limpa o store.
 
 O [`main.tsx`](src/main.tsx) (standalone) usa o mesmo `mount`, com `hostName: 'Standalone'` e o tema do sistema.
 
+## Estrutura
+
+Mesma arquitetura do `hwm-web-arch` (camadas por módulo):
+
+```
+src/
+├── remote-entry.tsx             # contrato: mount / update / unmount
+├── main.tsx                     # bootstrap standalone (usa o mesmo mount)
+├── styles/                      # remote.css (escopado) e standalone.css
+├── components/
+│   ├── app/                     # AppProvider (QueryProvider + Toaster)
+│   ├── page/PageHeader
+│   └── ui/                      # componentes do shadcn
+├── modules/
+│   ├── api/                     # ApiError, MockApiService, queryClient e queryMeta
+│   ├── host/                    # contrato, hostStore, HostController, emitHostEvent
+│   └── products/
+│       ├── interfaces/  constants/  mocks/
+│       ├── services/            # productsService.ts (um método por endpoint)
+│       ├── controllers/         # productsController.ts (orquestração, eventos para o host)
+│       ├── queries/             # productsQueries.ts e productsMutations.ts
+│       └── pages/Products/
+└── utils/                       # toast, sleep, storage, info
+```
+
+## API mock
+
+[`MockApiService`](src/modules/api/services/mockApiService.ts) simula uma API REST (`get`, `post`, `patch`, `delete` em
+`<coleção>` e `<coleção>/<id>`) com latência de 300 a 800 ms e persistência no `localStorage` (chave `mfe-remote:db`).
+
+Ele segue o mesmo contrato do `ApiService` do arch: resolve com o dado ou **lança `ApiError`** (ex.: 404 quando o
+registro não existe) e respeita o `signal` do React Query (cancela com `AbortError`). Trocar por um backend real é só
+trocar a instância exportada em [`modules/api/index.ts`](src/modules/api/index.ts).
+
+O `localStorage` é por origem: no standalone os dados ficam em `localhost:5173`/`4173` e, dentro do host, na origem do host.
+Para voltar aos dados iniciais, apague a chave `mfe-remote:db`.
+
+## Camadas e React Query
+
+Fluxo: `Componente → useXQuery / useXMutation → Controller / Service → apiMock`.
+
+- **Service**: um método por endpoint, repassando o `signal`.
+- **Controller**: orquestração fora do React. Ex.: `ProductsController.getProducts` busca a lista e avisa o host (`products:loaded`).
+- **Queries**: `productsKeys` (factory de keys), `productsQueries` (`queryOptions`) e `useProductsQuery`.
+- **Mutations**: invalidam `productsKeys.all` e enviam o evento ao host (`product:created`, `product:updated`, `product:deleted`).
+
+O [`queryClient`](src/modules/api/query/queryClient.ts) é um singleton (o cache sobrevive entre `unmount` e um novo `mount`):
+
+- `staleTime` de 1 min, sem refetch ao focar a janela.
+- Retry só para falha de rede e 5xx. Mutations nunca repetem.
+- Toda query ou mutation que falha vira toast de erro. `meta: { silent: true }` desliga, `meta.errorMessage` troca o texto.
+- Mutations só notificam sucesso com `meta.successMessage`.
+
+Fora dos requests, use `toast` de [`@/utils/toast`](src/utils/toast/index.ts), nunca `sonner` direto. O `<Toaster />` fica
+dentro do `AppProvider`, então renderiza dentro do `.mfe-root` e segue o tema do host.
+
+As devtools do React Query aparecem só no `yarn dev`.
+
 ## Como o build funciona
 
 O `vite.config.ts` gera dois entries no mesmo build:
@@ -93,6 +152,9 @@ npx shadcn@latest add <componente>
 
 Os arquivos são criados em `src/components/ui` (configuração em [`components.json`](components.json), apontando para o `remote.css`).
 Tokens novos vão em `.mfe-root` / `.mfe-root.dark`, nunca em `:root`.
+
+> **Atenção:** o [`sonner.tsx`](src/components/ui/sonner.tsx) lê o tema do `hostStore` (a CLI gera `useTheme` do `next-themes`).
+> Se rodar `add sonner --overwrite`, refaça o ajuste e não instale o `next-themes`.
 
 ## Deploy na Vercel
 
